@@ -15,7 +15,7 @@ import { availabilityService } from "../services/availabilityService";
 import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
 import { Badge, Btn, Empty, KV, Modal, useToast } from "../ui/kit";
-import { MoneyInput, moneyValue } from "../ui/money";
+
 import { IconCash, IconCheck, IconClock, IconPlus, IconReceipt, IconUsers, IconX } from "../ui/icons";
 import { TimeInput, faTimeDot } from "../ui/TimeInput";
 
