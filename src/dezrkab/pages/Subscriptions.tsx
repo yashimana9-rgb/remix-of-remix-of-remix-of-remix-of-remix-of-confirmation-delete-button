@@ -456,25 +456,39 @@ function SubCard({ sub }: { sub: any }) {
 
   const remaining = Math.round((sub.totalHours - sub.usedHours) * 100) / 100;
   const pct = sub.totalHours > 0 ? Math.min(100, (sub.usedHours / sub.totalHours) * 100) : 0;
-  const sMin = timeToMinutes(start);
   const eMin = timeToMinutes(end);
-  const previewHours = sMin !== null && eMin !== null && eMin > sMin ? Math.round(((eMin - sMin) / 60) * 100) / 100 : 0;
+  const openStartMin = sub.openSession ? timeToMinutes(sub.openSession.start) : null;
+  const returnHours =
+    openStartMin !== null && eMin !== null
+      ? Math.round((((eMin - openStartMin + 1440) % 1440) / 60) * 100) / 100
+      : 0;
   const expired = isExpired(sub);
   const daysLeft = sub.expiresAt ? Math.ceil((sub.expiresAt - Date.now()) / 86_400_000) : null;
   const accountName = sub.accountId
     ? db.settings.accounts.find((a: any) => a.id === sub.accountId)?.name ?? "—"
     : "—";
 
-  function addSession() {
+  function startTrip() {
     try {
-      subscriptionService.addSession(sub.id, { start, end });
-      toast.push("ok", `${faNum(previewHours)} ساعت ثبت شد`);
+      subscriptionService.startSession(sub.id, start);
+      toast.push("ok", "رفت ثبت شد — دوچرخه‌ها از موجودی خارج شدند");
+      setEnd("");
+    } catch (e) {
+      toast.push("err", e instanceof Error ? e.message : "ثبت رفت ناموفق بود");
+    }
+  }
+
+  function endTrip() {
+    try {
+      const s = subscriptionService.endSession(sub.id, end);
+      toast.push("ok", `برگشت ثبت شد — ${faNum(s.hours)} ساعت از مانده کم شد`);
       setStart(nowPlus(db.settings.prepMinutes ?? 0));
       setEnd("");
     } catch (e) {
-      toast.push("err", e instanceof Error ? e.message : "ثبت تردد ناموفق بود");
+      toast.push("err", e instanceof Error ? e.message : "ثبت برگشت ناموفق بود");
     }
   }
+
 
   function cancel() {
     try {
