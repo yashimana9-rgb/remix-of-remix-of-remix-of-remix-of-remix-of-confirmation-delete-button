@@ -190,14 +190,68 @@ export default function Subscriptions() {
                 />
               </div>
               <div>
-                <label className="lbl">هزینه هر ساعت (تومان) *</label>
-                <MoneyInput
-                  value={form.hourlyRate}
-                  onChange={(v) => setForm({ ...form, hourlyRate: v })}
-                  placeholder="0"
-                />
+                <label className="lbl">هزینه هر ساعت (تومان)</label>
+                <div className="inp num flex items-center bg-black/[0.03]" dir="ltr">
+                  {money(rateNum)}
+                </div>
+                <p className="mt-1 text-[10px] font-bold text-inkmute">
+                  از قیمت دسته دوچرخه‌های انتخاب‌شده محاسبه می‌شود
+                </p>
               </div>
             </div>
+
+            {/* انتخاب دوچرخه‌ها و تعداد */}
+            <div>
+              <label className="lbl">دوچرخه‌های اشتراک *</label>
+              {avail.length === 0 ? (
+                <p className="rounded-xl border border-danger/40 bg-dangersoft/50 p-2.5 text-[11px] font-bold text-danger">
+                  دسته دوچرخه فعالی تعریف نشده است
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {avail.map(({ category: c, available, total }) => {
+                    const q = qtys[c.id] ?? 0;
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
+                          q > 0 ? "border-branddeep bg-brandsoft/40" : "border-line"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-extrabold text-ink">{c.name}</p>
+                          <p className="num text-[10px] font-bold text-inkmute">
+                            {money(c.hourlyRate)} / ساعت — موجود {faNum(available)} از {faNum(total)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setQty(c.id, q - 1, total)}
+                            disabled={q <= 0}
+                            className="h-7 w-7 cursor-pointer rounded-lg border border-linedeep font-extrabold text-inksoft disabled:opacity-40"
+                          >
+                            −
+                          </button>
+                          <span className="num w-6 text-center text-sm font-extrabold text-ink">
+                            {faNum(q)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setQty(c.id, q + 1, total)}
+                            disabled={q >= total}
+                            className="h-7 w-7 cursor-pointer rounded-lg border border-linedeep font-extrabold text-inksoft disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
 
             <div>
               <label className="lbl">تخفیف روی کل هزینه (درصد)</label>
