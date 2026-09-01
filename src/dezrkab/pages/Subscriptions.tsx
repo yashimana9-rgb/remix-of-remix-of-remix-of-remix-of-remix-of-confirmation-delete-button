@@ -545,8 +545,21 @@ function SubCard({ sub }: { sub: any }) {
         </p>
       )}
 
-      {sub.status === "ACTIVE" && !expired && (
-        <div className="mt-3 grid items-end gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto]">
+      {(sub.items ?? []).length > 0 && (
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-inksoft">
+          <IconCheck size={12} className="text-inkmute" />
+          دوچرخه‌ها:
+          {(sub.items ?? []).map((i: any) => (
+            <span key={i.categoryId} className="num rounded-lg bg-black/[0.04] px-2 py-0.5 text-ink">
+              {faNum(i.qty)} × {i.name}
+            </span>
+          ))}
+          {sub.openSession && <Badge tone="warn">در دست مشتری</Badge>}
+        </p>
+      )}
+
+      {sub.status === "ACTIVE" && !expired && !sub.openSession && (
+        <div className="mt-3 grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto]">
           <TimeInput
             label="ساعت رفت"
             value={start}
@@ -556,13 +569,37 @@ function SubCard({ sub }: { sub: any }) {
             nowOffsetMinutes={db.settings.prepMinutes ?? 0}
             ltr
           />
-          <TimeInput label="ساعت برگشت" value={end} onChange={setEnd} separator=":" showHalfHour ltr />
-          <Btn data-enter-submit onClick={addSession} disabled={previewHours <= 0} className="h-[42px] w-full lg:w-auto">
+          <Btn data-enter-submit onClick={startTrip} className="h-[42px] w-full sm:w-auto">
             <IconCheck size={15} />
-            ثبت {previewHours > 0 ? `${faNum(previewHours)} ساعت` : "تردد"}
+            ثبت رفت و تحویل دوچرخه
           </Btn>
         </div>
       )}
+
+      {sub.status === "ACTIVE" && sub.openSession && (
+        <div className="mt-3 grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto]">
+          <p className="num text-[11px] font-bold text-inksoft" dir="rtl">
+            رفت ثبت‌شده در ساعت{" "}
+            <span className="text-ink" dir="ltr">
+              {faTimeDot(sub.openSession.start)}
+            </span>{" "}
+            — دوچرخه‌ها از موجودی خارج شده‌اند
+          </p>
+          <div className="grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto] sm:col-span-2">
+            <TimeInput label="ساعت برگشت" value={end} onChange={setEnd} separator=":" showHalfHour ltr />
+            <Btn
+              data-enter-submit
+              onClick={endTrip}
+              disabled={timeToMinutes(end) === null}
+              className="h-[42px] w-full sm:w-auto"
+            >
+              <IconCheck size={15} />
+              ثبت برگشت {returnHours > 0 ? `(${faNum(returnHours)} ساعت)` : ""}
+            </Btn>
+          </div>
+        </div>
+      )}
+
 
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
