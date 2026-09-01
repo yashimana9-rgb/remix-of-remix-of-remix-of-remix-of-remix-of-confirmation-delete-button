@@ -15,7 +15,7 @@ import { availabilityService } from "../services/availabilityService";
 import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
 import { Badge, Btn, Empty, KV, Modal, useToast } from "../ui/kit";
-import { MoneyInput, moneyValue } from "../ui/money";
+
 import { IconCash, IconCheck, IconClock, IconPlus, IconReceipt, IconUsers, IconX } from "../ui/icons";
 import { TimeInput, faTimeDot } from "../ui/TimeInput";
 
@@ -58,6 +58,18 @@ export default function Subscriptions() {
   }, [accounts, form.accountId]);
 
   const cats = useMemo(() => db.categories.filter((c) => c.active), [db.categories]);
+  /** موجودی لحظه‌ای هر دسته برای انتخاب دوچرخه اشتراک */
+  const avail = useMemo(() => availabilityService.snapshot(db), [db]);
+  function setQty(catId: string, v: number, max: number) {
+    const clamped = Math.max(0, Math.min(max, v));
+    setQtys((q) => {
+      const next = { ...q };
+      if (clamped === 0) delete next[catId];
+      else next[catId] = clamped;
+      return next;
+    });
+  }
+
   const pickedItems = useMemo(
     () =>
       cats
@@ -190,14 +202,68 @@ export default function Subscriptions() {
                 />
               </div>
               <div>
-                <label className="lbl">هزینه هر ساعت (تومان) *</label>
-                <MoneyInput
-                  value={form.hourlyRate}
-                  onChange={(v) => setForm({ ...form, hourlyRate: v })}
-                  placeholder="0"
-                />
+                <label className="lbl">هزینه هر ساعت (تومان)</label>
+                <div className="inp num flex items-center bg-black/[0.03]" dir="ltr">
+                  {money(rateNum)}
+                </div>
+                <p className="mt-1 text-[10px] font-bold text-inkmute">
+                  از قیمت دسته دوچرخه‌های انتخاب‌شده محاسبه می‌شود
+                </p>
               </div>
             </div>
+
+            {/* انتخاب دوچرخه‌ها و تعداد */}
+            <div>
+              <label className="lbl">دوچرخه‌های اشتراک *</label>
+              {avail.length === 0 ? (
+                <p className="rounded-xl border border-danger/40 bg-dangersoft/50 p-2.5 text-[11px] font-bold text-danger">
+                  دسته دوچرخه فعالی تعریف نشده است
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {avail.map(({ category: c, available, total }) => {
+                    const q = qtys[c.id] ?? 0;
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
+                          q > 0 ? "border-branddeep bg-brandsoft/40" : "border-line"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-extrabold text-ink">{c.name}</p>
+                          <p className="num text-[10px] font-bold text-inkmute">
+                            {money(c.hourlyRate)} / ساعت — موجود {faNum(available)} از {faNum(total)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setQty(c.id, q - 1, total)}
+                            disabled={q <= 0}
+                            className="h-7 w-7 cursor-pointer rounded-lg border border-linedeep font-extrabold text-inksoft disabled:opacity-40"
+                          >
+                            −
+                          </button>
+                          <span className="num w-6 text-center text-sm font-extrabold text-ink">
+                            {faNum(q)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setQty(c.id, q + 1, total)}
+                            disabled={q >= total}
+                            className="h-7 w-7 cursor-pointer rounded-lg border border-linedeep font-extrabold text-inksoft disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
 
             <div>
               <label className="lbl">تخفیف روی کل هزینه (درصد)</label>
@@ -390,25 +456,39 @@ function SubCard({ sub }: { sub: any }) {
 
   const remaining = Math.round((sub.totalHours - sub.usedHours) * 100) / 100;
   const pct = sub.totalHours > 0 ? Math.min(100, (sub.usedHours / sub.totalHours) * 100) : 0;
-  const sMin = timeToMinutes(start);
   const eMin = timeToMinutes(end);
-  const previewHours = sMin !== null && eMin !== null && eMin > sMin ? Math.round(((eMin - sMin) / 60) * 100) / 100 : 0;
+  const openStartMin = sub.openSession ? timeToMinutes(sub.openSession.start) : null;
+  const returnHours =
+    openStartMin !== null && eMin !== null
+      ? Math.round((((eMin - openStartMin + 1440) % 1440) / 60) * 100) / 100
+      : 0;
   const expired = isExpired(sub);
   const daysLeft = sub.expiresAt ? Math.ceil((sub.expiresAt - Date.now()) / 86_400_000) : null;
   const accountName = sub.accountId
     ? db.settings.accounts.find((a: any) => a.id === sub.accountId)?.name ?? "—"
     : "—";
 
-  function addSession() {
+  function startTrip() {
     try {
-      subscriptionService.addSession(sub.id, { start, end });
-      toast.push("ok", `${faNum(previewHours)} ساعت ثبت شد`);
+      subscriptionService.startSession(sub.id, start);
+      toast.push("ok", "رفت ثبت شد — دوچرخه‌ها از موجودی خارج شدند");
+      setEnd("");
+    } catch (e) {
+      toast.push("err", e instanceof Error ? e.message : "ثبت رفت ناموفق بود");
+    }
+  }
+
+  function endTrip() {
+    try {
+      const s = subscriptionService.endSession(sub.id, end);
+      toast.push("ok", `برگشت ثبت شد — ${faNum(s.hours)} ساعت از مانده کم شد`);
       setStart(nowPlus(db.settings.prepMinutes ?? 0));
       setEnd("");
     } catch (e) {
-      toast.push("err", e instanceof Error ? e.message : "ثبت تردد ناموفق بود");
+      toast.push("err", e instanceof Error ? e.message : "ثبت برگشت ناموفق بود");
     }
   }
+
 
   function cancel() {
     try {
@@ -479,8 +559,21 @@ function SubCard({ sub }: { sub: any }) {
         </p>
       )}
 
-      {sub.status === "ACTIVE" && !expired && (
-        <div className="mt-3 grid items-end gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto]">
+      {(sub.items ?? []).length > 0 && (
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-inksoft">
+          <IconCheck size={12} className="text-inkmute" />
+          دوچرخه‌ها:
+          {(sub.items ?? []).map((i: any) => (
+            <span key={i.categoryId} className="num rounded-lg bg-black/[0.04] px-2 py-0.5 text-ink">
+              {faNum(i.qty)} × {i.name}
+            </span>
+          ))}
+          {sub.openSession && <Badge tone="warn">در دست مشتری</Badge>}
+        </p>
+      )}
+
+      {sub.status === "ACTIVE" && !expired && !sub.openSession && (
+        <div className="mt-3 grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto]">
           <TimeInput
             label="ساعت رفت"
             value={start}
@@ -490,13 +583,37 @@ function SubCard({ sub }: { sub: any }) {
             nowOffsetMinutes={db.settings.prepMinutes ?? 0}
             ltr
           />
-          <TimeInput label="ساعت برگشت" value={end} onChange={setEnd} separator=":" showHalfHour ltr />
-          <Btn data-enter-submit onClick={addSession} disabled={previewHours <= 0} className="h-[42px] w-full lg:w-auto">
+          <Btn data-enter-submit onClick={startTrip} className="h-[42px] w-full sm:w-auto">
             <IconCheck size={15} />
-            ثبت {previewHours > 0 ? `${faNum(previewHours)} ساعت` : "تردد"}
+            ثبت رفت و تحویل دوچرخه
           </Btn>
         </div>
       )}
+
+      {sub.status === "ACTIVE" && sub.openSession && (
+        <div className="mt-3 grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto]">
+          <p className="num text-[11px] font-bold text-inksoft" dir="rtl">
+            رفت ثبت‌شده در ساعت{" "}
+            <span className="text-ink" dir="ltr">
+              {faTimeDot(sub.openSession.start)}
+            </span>{" "}
+            — دوچرخه‌ها از موجودی خارج شده‌اند
+          </p>
+          <div className="grid items-end gap-2 sm:grid-cols-[minmax(150px,1fr)_auto] sm:col-span-2">
+            <TimeInput label="ساعت برگشت" value={end} onChange={setEnd} separator=":" showHalfHour ltr />
+            <Btn
+              data-enter-submit
+              onClick={endTrip}
+              disabled={timeToMinutes(end) === null}
+              className="h-[42px] w-full sm:w-auto"
+            >
+              <IconCheck size={15} />
+              ثبت برگشت {returnHours > 0 ? `(${faNum(returnHours)} ساعت)` : ""}
+            </Btn>
+          </div>
+        </div>
+      )}
+
 
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
