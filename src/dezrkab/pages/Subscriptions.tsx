@@ -58,6 +58,18 @@ export default function Subscriptions() {
   }, [accounts, form.accountId]);
 
   const cats = useMemo(() => db.categories.filter((c) => c.active), [db.categories]);
+  /** موجودی لحظه‌ای هر دسته برای انتخاب دوچرخه اشتراک */
+  const avail = useMemo(() => availabilityService.snapshot(db), [db]);
+  function setQty(catId: string, v: number, max: number) {
+    const clamped = Math.max(0, Math.min(max, v));
+    setQtys((q) => {
+      const next = { ...q };
+      if (clamped === 0) delete next[catId];
+      else next[catId] = clamped;
+      return next;
+    });
+  }
+
   const pickedItems = useMemo(
     () =>
       cats
