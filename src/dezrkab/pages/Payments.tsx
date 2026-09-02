@@ -136,7 +136,12 @@ export default function Payments() {
                   const c = r ? db.customers.find((x) => x.id === r.customerId) : null;
                   const op = db.users.find((u) => u.id === p.operatorId);
                   return (
-                    <tr key={p.id} className="transition-colors hover:bg-black/[0.02]">
+                    <tr
+                      key={p.id}
+                      onClick={() => setPrintPayment(p)}
+                      className="cursor-pointer transition-colors hover:bg-black/[0.02]"
+                      title="کلیک برای مشاهده و چاپ رسید"
+                    >
                       <td className="num px-4 py-2.5 text-xs text-inksoft">{fmtDateTime(p.createdAt)}</td>
                       <td className="num px-4 py-2.5 font-display text-ink">{r ? `#${faNum(r.number)}` : "—"}</td>
                       <td className="px-4 py-2.5 font-bold text-ink">{c?.name ?? "—"}</td>
@@ -152,7 +157,10 @@ export default function Payments() {
                       {can(user, "payment.correct") && (
                         <td className="px-4 py-2.5 text-end">
                           <button
-                            onClick={() => setCorrFor(p)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCorrFor(p);
+                            }}
                             className="cursor-pointer rounded-lg p-1.5 text-inkmute transition-colors hover:bg-warnsoft hover:text-warn"
                             title="اصلاح با سند اصلاحی"
                           >
