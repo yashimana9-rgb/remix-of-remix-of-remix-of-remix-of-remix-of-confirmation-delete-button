@@ -16,8 +16,9 @@ import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
 import { Badge, Btn, Empty, KV, Modal, useToast } from "../ui/kit";
 
-import { IconCash, IconCheck, IconClock, IconPlus, IconReceipt, IconUsers, IconX } from "../ui/icons";
+import { IconCash, IconCheck, IconClock, IconPlus, IconPrint, IconReceipt, IconUsers, IconX } from "../ui/icons";
 import { TimeInput, faTimeDot } from "../ui/TimeInput";
+import { SubscriptionReceipt, printThermalReceipt } from "../ui/receipts";
 
 
 const EMPTY_FORM = {
@@ -44,6 +45,8 @@ export default function Subscriptions() {
   /** تعداد انتخاب‌شده از هر دسته دوچرخه */
   const [qtys, setQtys] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "FINISHED">("ACTIVE");
+  /* فاکتور اشتراک تازه‌ثبت‌شده — برای چاپ */
+  const [createdSub, setCreatedSub] = useState<any>(null);
 
   const accounts = useMemo(
     () => (db.settings.accounts ?? []).filter((a) => a.active),
@@ -120,6 +123,8 @@ export default function Subscriptions() {
       setForm({ ...EMPTY_FORM, accountId: form.accountId });
       setQtys({});
       setFilter("ACTIVE");
+      /* فاکتور برای چاپ باز می‌شود */
+      setCreatedSub(sub);
     } catch (e) {
       toast.push("err", e instanceof Error ? e.message : "ثبت اشتراک ناموفق بود");
     }
@@ -437,6 +442,24 @@ export default function Subscriptions() {
           subs.map((s) => <SubCard key={s.id} sub={s} />)
         )}
       </section>
+
+      {/* مودال فاکتور اشتراک — بلافاصله پس از ثبت */}
+      <Modal
+        open={!!createdSub}
+        onClose={() => setCreatedSub(null)}
+        title={createdSub ? `فاکتور اشتراک — ${createdSub.name}` : ""}
+      >
+        {createdSub && <SubscriptionReceipt sub={createdSub} />}
+        <div className="mt-4 flex gap-2">
+          <Btn className="flex-1" onClick={printThermalReceipt} autoFocus>
+            <IconPrint size={16} />
+            چاپ فاکتور
+          </Btn>
+          <Btn variant="dark" className="flex-1" onClick={() => setCreatedSub(null)}>
+            بستن
+          </Btn>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -453,6 +476,7 @@ function SubCard({ sub }: { sub: any }) {
   const [end, setEnd] = useState("");
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const remaining = Math.round((sub.totalHours - sub.usedHours) * 100) / 100;
   const pct = sub.totalHours > 0 ? Math.min(100, (sub.usedHours / sub.totalHours) * 100) : 0;
@@ -624,15 +648,24 @@ function SubCard({ sub }: { sub: any }) {
         >
           {open ? "بستن تاریخچه" : `تاریخچه تردد (${faNum(sub.sessions.length)})`}
         </button>
-        {sub.status === "ACTIVE" && (
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setConfirmOpen(true)}
-            className="flex cursor-pointer items-center gap-1 text-[11px] font-extrabold text-inkmute transition-colors hover:text-danger"
+            onClick={() => setInvoiceOpen(true)}
+            className="flex cursor-pointer items-center gap-1 text-[11px] font-extrabold text-inkmute transition-colors hover:text-branddeep"
           >
-            <IconX size={12} /> لغو اشتراک
+            <IconPrint size={12} /> چاپ فاکتور
           </button>
-        )}
+          {sub.status === "ACTIVE" && (
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              className="flex cursor-pointer items-center gap-1 text-[11px] font-extrabold text-inkmute transition-colors hover:text-danger"
+            >
+              <IconX size={12} /> لغو اشتراک
+            </button>
+          )}
+        </div>
       </div>
 
       {open && (
@@ -659,6 +692,19 @@ function SubCard({ sub }: { sub: any }) {
           )}
         </div>
       )}
+
+      <Modal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} title={`فاکتور اشتراک — ${sub.name}`}>
+        <SubscriptionReceipt sub={sub} />
+        <div className="mt-4 flex gap-2">
+          <Btn className="flex-1" onClick={printThermalReceipt} autoFocus>
+            <IconPrint size={16} />
+            چاپ فاکتور
+          </Btn>
+          <Btn variant="dark" className="flex-1" onClick={() => setInvoiceOpen(false)}>
+            بستن
+          </Btn>
+        </div>
+      </Modal>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="تأیید لغو اشتراک">
         <div className="space-y-4">

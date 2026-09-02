@@ -12,12 +12,14 @@ import { accountKindLabel, countdown, faNum, fmtDateTime, fmtTime, money } from 
 import { Badge, Btn, Empty, KV, Modal, Stepper, useToast } from "../ui/kit";
 import { PaymentSplit, makeSplit, splitPayments, splitTotal } from "../ui/money";
 
+import { ReturnReceipt, printThermalReceipt } from "../ui/receipts";
 import {
   IconAlert,
   IconCheck,
   IconClock,
   IconFlag,
   IconPhone,
+  IconPrint,
   IconReturn,
   IconSearch,
   IconWallet,
@@ -44,6 +46,8 @@ export default function Returns() {
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  /* فاکتور نهایی پس از برگشت کامل — برای چاپ */
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   const inProgress = db.rentals.filter(
     (r) => r.status === "ACTIVE" || r.status === "PARTIAL"
@@ -153,6 +157,8 @@ export default function Returns() {
             ? `برگشت کامل — ${parts.join(" — ")}`
             : "برگشت کامل ثبت شد — دوچرخه‌ها آماده اجاره‌اند"
         );
+        /* فاکتور نهایی برای چاپ باز می‌شود */
+        setInvoiceId(rental.id);
       } else {
         toast.push("ok", `برگشت نسبی — ${faNum(res.releasedCount)} دستگاه آزاد شد`);
       }
@@ -523,6 +529,10 @@ export default function Returns() {
                         <IconCheck size={13} />
                         تسویه کامل شد
                       </Badge>
+                      <Btn size="sm" variant="dark" className="w-full" onClick={() => setInvoiceId(rental.id)}>
+                        <IconPrint size={15} />
+                        چاپ فاکتور نهایی
+                      </Btn>
                     </div>
 
                   ) : !hasOutstanding && remaining > 0 ? (
@@ -549,6 +559,29 @@ export default function Returns() {
           </div>
         )}
       </section>
+
+      {/* مودال فاکتور نهایی — پس از برگشت کامل یا از بخش تسویه */}
+      {(() => {
+        const inv = invoiceId ? db.rentals.find((r) => r.id === invoiceId) : null;
+        return (
+          <Modal
+            open={!!inv}
+            onClose={() => setInvoiceId(null)}
+            title={inv ? `فاکتور نهایی اجاره #${faNum(inv.number)}` : ""}
+          >
+            {inv && <ReturnReceipt rental={inv} />}
+            <div className="mt-4 flex gap-2">
+              <Btn className="flex-1" onClick={printThermalReceipt} autoFocus>
+                <IconPrint size={16} />
+                چاپ فاکتور
+              </Btn>
+              <Btn variant="dark" className="flex-1" onClick={() => setInvoiceId(null)}>
+                بستن
+              </Btn>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {/* مودال لغو */}
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="لغو اجاره">
