@@ -157,6 +157,8 @@ export default function Returns() {
             ? `برگشت کامل — ${parts.join(" — ")}`
             : "برگشت کامل ثبت شد — دوچرخه‌ها آماده اجاره‌اند"
         );
+        /* فاکتور نهایی برای چاپ باز می‌شود */
+        setInvoiceId(rental.id);
       } else {
         toast.push("ok", `برگشت نسبی — ${faNum(res.releasedCount)} دستگاه آزاد شد`);
       }
@@ -527,6 +529,10 @@ export default function Returns() {
                         <IconCheck size={13} />
                         تسویه کامل شد
                       </Badge>
+                      <Btn size="sm" variant="dark" className="w-full" onClick={() => setInvoiceId(rental.id)}>
+                        <IconPrint size={15} />
+                        چاپ فاکتور نهایی
+                      </Btn>
                     </div>
 
                   ) : !hasOutstanding && remaining > 0 ? (
