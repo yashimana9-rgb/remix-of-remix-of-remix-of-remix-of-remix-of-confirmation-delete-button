@@ -8,9 +8,9 @@ import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, fmtDateTime, isSameDay, money } from "../utils/format";
 import { Badge, Btn, Empty, Modal, useToast } from "../ui/kit";
 import { MoneyInput, PaymentSplit, makeSplit, moneyValue, splitPayments } from "../ui/money";
+import { PaymentReceipt, printThermalReceipt } from "../ui/receipts";
 
-
-import { IconCash, IconEdit, IconPlus, IconSearch, IconWallet } from "../ui/icons";
+import { IconCash, IconEdit, IconPlus, IconPrint, IconSearch, IconWallet } from "../ui/icons";
 
 type Tab = "all" | "rent" | "corr";
 
