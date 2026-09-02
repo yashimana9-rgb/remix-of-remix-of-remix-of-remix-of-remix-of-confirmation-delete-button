@@ -1,12 +1,14 @@
 // @ts-nocheck
 /**
  * رسیدهای حرارتی ۸۰ میلی‌متری — مشترک بین صفحه‌ها
- * فاکتور نهایی برگشت اجاره + فاکتور اشتراک، با همان چیدمان رسید اجاره حضوری.
+ * فاکتور نهایی برگشت اجاره + فاکتور اشتراک + رسید پرداخت.
+ * فقط اطلاعات مربوط به مشتری چاپ می‌شود؛ نام فروشنده، بانک، اپراتور یا
+ * هر جزئیات فنی دیگر در رسید نمی‌آید.
  */
 import type { Payment, Rental, Subscription } from "../domain/models";
 import { KIND_LABEL, paymentService } from "../services/paymentService";
 import { useDB } from "../storage/storage";
-import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtDateTime, fmtTime, money } from "../utils/format";
+import { faNum, fmtDateFull, fmtDateTime, fmtTime, money } from "../utils/format";
 
 /**
  * چاپ روی رول حرارتی ۸ سانتی — بدون کاغذ اضافه.
@@ -50,8 +52,6 @@ function ReceiptShell({
   subtitle: string;
   children: React.ReactNode;
 }) {
-  const db = useDB();
-  const S = db.settings;
   return (
     <div
       dir="rtl"
@@ -59,24 +59,15 @@ function ReceiptShell({
     >
       {/* ── سربرگ ── */}
       <header className="text-center">
-        <p className="text-[9px] font-extrabold tracking-[0.28em] text-[#3d3d3a]">
-          {S.receiptTitleSub}
-        </p>
-        <h1 className="font-display text-[27px] leading-9 text-[#111]">{S.receiptTitleMain}</h1>
-        <div className="mx-auto mt-1 h-[3px] w-12 border-y border-[#111]" />
         <p className="num mt-1.5 text-[9.5px] font-bold text-[#3d3d3a]">
           {fmtDateFull(Date.now())} <span className="mx-1 text-[#9a9a94]">•</span> {subtitle}
         </p>
         <p className="mt-0.5 text-[11px] font-black text-[#111]">{title}</p>
       </header>
       {children}
-      {/* ── تشکر و تماس ── */}
+      {/* ── تشکر ── */}
       <footer className="mt-2 border-t border-dashed border-[#8f8f8a] pt-2 text-center">
-        <p className="text-[11px] font-extrabold text-[#111]">{S.receiptThanks}</p>
-        <p className="mt-1.5 text-[9px] font-bold text-[#5c5c58]">برای اطلاعات بیشتر با ما تماس بگیرید</p>
-        <p className="num text-[15px] font-black tracking-wide text-[#111]" dir="ltr">
-          {faPhone(S.receiptPhone)}
-        </p>
+        <p className="text-[11px] font-extrabold text-[#111]">با تشکر از انتخاب شما</p>
       </footer>
     </div>
   );
@@ -171,14 +162,11 @@ export function ReturnReceipt({ rental }: { rental: Rental }) {
       <div className="num mt-1.5 space-y-0.5 text-[11px] font-bold text-[#3d3d3a]">
         <Row k="پرداخت شده" v={money(paid)} />
         <Row k="مانده" v={money(remaining)} strong />
-        {pays.map((p) => {
-          const acc = db.settings.accounts.find((a) => a.id === p.accountId);
-          return (
-            <p key={p.id} className="pt-0.5 text-[9.5px] font-bold text-[#5c5c58]">
-              دریافت {money(p.amount)} — {acc ? acc.name : accountKindLabel(acc?.kind ?? "POS")}
-            </p>
-          );
-        })}
+        {pays.map((p) => (
+          <p key={p.id} className="pt-0.5 text-[9.5px] font-bold text-[#5c5c58]">
+            دریافت {money(p.amount)}
+          </p>
+        ))}
       </div>
     </ReceiptShell>
   );
@@ -187,9 +175,6 @@ export function ReturnReceipt({ rental }: { rental: Rental }) {
 /* ---------------------------- فاکتور اشتراک ---------------------------- */
 
 export function SubscriptionReceipt({ sub }: { sub: Subscription }) {
-  const db = useDB();
-  const acc = db.settings.accounts.find((a) => a.id === sub.accountId);
-
   return (
     <ReceiptShell title="فاکتور اشتراک" subtitle={sub.planTitle}>
       {/* ── مشتری ── */}
@@ -252,9 +237,6 @@ export function SubscriptionReceipt({ sub }: { sub: Subscription }) {
             {faNum(sub.total)} <span className="text-[11px]">تومان</span>
           </span>
         </div>
-        <p className="pt-1 text-[9.5px] font-bold text-[#5c5c58]">
-          پرداخت: {acc ? `${acc.name} — ${accountKindLabel(acc.kind)}` : "—"}
-        </p>
       </div>
     </ReceiptShell>
   );
@@ -271,8 +253,6 @@ export function PaymentReceipt({ payment }: { payment: Payment }) {
     : sub
       ? { name: sub.name, phone: sub.phone }
       : null;
-  const acc = db.settings.accounts.find((a) => a.id === payment.accountId);
-  const op = db.users.find((u) => u.id === payment.operatorId);
 
   const subtitle = rental
     ? `اجاره #${faNum(rental.number)}`
@@ -297,8 +277,6 @@ export function PaymentReceipt({ payment }: { payment: Payment }) {
       <div className="mt-2.5 space-y-0.5 border-t border-dashed border-[#8f8f8a] pt-1.5">
         <Row k="نوع پرداخت" v={KIND_LABEL[payment.kind]} />
         <Row k="تاریخ / ساعت" v={fmtDateTime(payment.createdAt)} />
-        <Row k="اپراتور" v={op?.name ?? "سامانه"} />
-        <Row k="حساب" v={acc ? `${acc.name} — ${accountKindLabel(acc.kind)}` : "—"} />
         {payment.note && <Row k="توضیحات" v={payment.note} />}
       </div>
 
