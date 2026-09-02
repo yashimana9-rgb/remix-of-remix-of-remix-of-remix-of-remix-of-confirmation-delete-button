@@ -179,6 +179,17 @@ export default function Payments() {
 
       <AddPaymentModal open={addOpen} onClose={() => setAddOpen(false)} />
       <CorrectionModal payment={corrFor} onClose={() => setCorrFor(null)} />
+      <Modal open={!!printPayment} onClose={() => setPrintPayment(null)} title="رسید پرداخت" wide>
+        {printPayment && (
+          <div className="space-y-3">
+            <PaymentReceipt payment={printPayment} />
+            <Btn className="w-full" onClick={printThermalReceipt}>
+              <IconPrint size={16} />
+              چاپ رسید
+            </Btn>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
