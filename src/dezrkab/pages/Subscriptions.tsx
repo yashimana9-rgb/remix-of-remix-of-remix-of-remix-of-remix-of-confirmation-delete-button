@@ -442,6 +442,24 @@ export default function Subscriptions() {
           subs.map((s) => <SubCard key={s.id} sub={s} />)
         )}
       </section>
+
+      {/* مودال فاکتور اشتراک — بلافاصله پس از ثبت */}
+      <Modal
+        open={!!createdSub}
+        onClose={() => setCreatedSub(null)}
+        title={createdSub ? `فاکتور اشتراک — ${createdSub.name}` : ""}
+      >
+        {createdSub && <SubscriptionReceipt sub={createdSub} />}
+        <div className="mt-4 flex gap-2">
+          <Btn className="flex-1" onClick={printThermalReceipt} autoFocus>
+            <IconPrint size={16} />
+            چاپ فاکتور
+          </Btn>
+          <Btn variant="dark" className="flex-1" onClick={() => setCreatedSub(null)}>
+            بستن
+          </Btn>
+        </div>
+      </Modal>
     </div>
   );
 }
