@@ -16,8 +16,9 @@ import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
 import { Badge, Btn, Empty, KV, Modal, useToast } from "../ui/kit";
 
-import { IconCash, IconCheck, IconClock, IconPlus, IconReceipt, IconUsers, IconX } from "../ui/icons";
+import { IconCash, IconCheck, IconClock, IconPlus, IconPrint, IconReceipt, IconUsers, IconX } from "../ui/icons";
 import { TimeInput, faTimeDot } from "../ui/TimeInput";
+import { SubscriptionReceipt, printThermalReceipt } from "../ui/receipts";
 
 
 const EMPTY_FORM = {
@@ -44,6 +45,8 @@ export default function Subscriptions() {
   /** تعداد انتخاب‌شده از هر دسته دوچرخه */
   const [qtys, setQtys] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "FINISHED">("ACTIVE");
+  /* فاکتور اشتراک تازه‌ثبت‌شده — برای چاپ */
+  const [createdSub, setCreatedSub] = useState<any>(null);
 
   const accounts = useMemo(
     () => (db.settings.accounts ?? []).filter((a) => a.active),
@@ -120,6 +123,8 @@ export default function Subscriptions() {
       setForm({ ...EMPTY_FORM, accountId: form.accountId });
       setQtys({});
       setFilter("ACTIVE");
+      /* فاکتور برای چاپ باز می‌شود */
+      setCreatedSub(sub);
     } catch (e) {
       toast.push("err", e instanceof Error ? e.message : "ثبت اشتراک ناموفق بود");
     }
