@@ -12,12 +12,14 @@ import { accountKindLabel, countdown, faNum, fmtDateTime, fmtTime, money } from 
 import { Badge, Btn, Empty, KV, Modal, Stepper, useToast } from "../ui/kit";
 import { PaymentSplit, makeSplit, splitPayments, splitTotal } from "../ui/money";
 
+import { ReturnReceipt, printThermalReceipt } from "../ui/receipts";
 import {
   IconAlert,
   IconCheck,
   IconClock,
   IconFlag,
   IconPhone,
+  IconPrint,
   IconReturn,
   IconSearch,
   IconWallet,
@@ -44,6 +46,8 @@ export default function Returns() {
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  /* فاکتور نهایی پس از برگشت کامل — برای چاپ */
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   const inProgress = db.rentals.filter(
     (r) => r.status === "ACTIVE" || r.status === "PARTIAL"
