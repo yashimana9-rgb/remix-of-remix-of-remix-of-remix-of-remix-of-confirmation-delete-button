@@ -8,9 +8,9 @@ import { useDB } from "../storage/storage";
 import { accountKindLabel, faNum, fmtDateTime, isSameDay, money } from "../utils/format";
 import { Badge, Btn, Empty, Modal, useToast } from "../ui/kit";
 import { MoneyInput, PaymentSplit, makeSplit, moneyValue, splitPayments } from "../ui/money";
+import { PaymentReceipt, printThermalReceipt } from "../ui/receipts";
 
-
-import { IconCash, IconEdit, IconPlus, IconSearch, IconWallet } from "../ui/icons";
+import { IconCash, IconEdit, IconPlus, IconPrint, IconSearch, IconWallet } from "../ui/icons";
 
 type Tab = "all" | "rent" | "corr";
 
@@ -30,6 +30,7 @@ export default function Payments() {
   const [q, setQ] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [corrFor, setCorrFor] = useState<Payment | null>(null);
+  const [printPayment, setPrintPayment] = useState<Payment | null>(null);
 
   const now = Date.now();
   const activeLike = db.rentals.filter(
@@ -135,7 +136,12 @@ export default function Payments() {
                   const c = r ? db.customers.find((x) => x.id === r.customerId) : null;
                   const op = db.users.find((u) => u.id === p.operatorId);
                   return (
-                    <tr key={p.id} className="transition-colors hover:bg-black/[0.02]">
+                    <tr
+                      key={p.id}
+                      onClick={() => setPrintPayment(p)}
+                      className="cursor-pointer transition-colors hover:bg-black/[0.02]"
+                      title="کلیک برای مشاهده و چاپ رسید"
+                    >
                       <td className="num px-4 py-2.5 text-xs text-inksoft">{fmtDateTime(p.createdAt)}</td>
                       <td className="num px-4 py-2.5 font-display text-ink">{r ? `#${faNum(r.number)}` : "—"}</td>
                       <td className="px-4 py-2.5 font-bold text-ink">{c?.name ?? "—"}</td>
@@ -151,7 +157,10 @@ export default function Payments() {
                       {can(user, "payment.correct") && (
                         <td className="px-4 py-2.5 text-end">
                           <button
-                            onClick={() => setCorrFor(p)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCorrFor(p);
+                            }}
                             className="cursor-pointer rounded-lg p-1.5 text-inkmute transition-colors hover:bg-warnsoft hover:text-warn"
                             title="اصلاح با سند اصلاحی"
                           >
@@ -170,6 +179,17 @@ export default function Payments() {
 
       <AddPaymentModal open={addOpen} onClose={() => setAddOpen(false)} />
       <CorrectionModal payment={corrFor} onClose={() => setCorrFor(null)} />
+      <Modal open={!!printPayment} onClose={() => setPrintPayment(null)} title="رسید پرداخت" wide>
+        {printPayment && (
+          <div className="space-y-3">
+            <PaymentReceipt payment={printPayment} />
+            <Btn className="w-full" onClick={printThermalReceipt}>
+              <IconPrint size={16} />
+              چاپ رسید
+            </Btn>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

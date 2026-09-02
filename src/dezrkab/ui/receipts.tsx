@@ -3,10 +3,10 @@
  * رسیدهای حرارتی ۸۰ میلی‌متری — مشترک بین صفحه‌ها
  * فاکتور نهایی برگشت اجاره + فاکتور اشتراک، با همان چیدمان رسید اجاره حضوری.
  */
-import type { Rental, Subscription } from "../domain/models";
-import { paymentService } from "../services/paymentService";
+import type { Payment, Rental, Subscription } from "../domain/models";
+import { KIND_LABEL, paymentService } from "../services/paymentService";
 import { useDB } from "../storage/storage";
-import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
+import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtDateTime, fmtTime, money } from "../utils/format";
 
 /**
  * چاپ روی رول حرارتی ۸ سانتی — بدون کاغذ اضافه.
@@ -255,6 +255,59 @@ export function SubscriptionReceipt({ sub }: { sub: Subscription }) {
         <p className="pt-1 text-[9.5px] font-bold text-[#5c5c58]">
           پرداخت: {acc ? `${acc.name} — ${accountKindLabel(acc.kind)}` : "—"}
         </p>
+      </div>
+    </ReceiptShell>
+  );
+}
+
+/* ---------------------------- رسید هر پرداخت ---------------------------- */
+
+export function PaymentReceipt({ payment }: { payment: Payment }) {
+  const db = useDB();
+  const rental = payment.rentalId ? db.rentals.find((r) => r.id === payment.rentalId) : null;
+  const sub = payment.subscriptionId ? db.subscriptions.find((s) => s.id === payment.subscriptionId) : null;
+  const cust = rental
+    ? db.customers.find((c) => c.id === rental.customerId)
+    : sub
+      ? { name: sub.name, phone: sub.phone }
+      : null;
+  const acc = db.settings.accounts.find((a) => a.id === payment.accountId);
+  const op = db.users.find((u) => u.id === payment.operatorId);
+
+  const subtitle = rental
+    ? `اجاره #${faNum(rental.number)}`
+    : sub
+      ? sub.planTitle
+      : "—";
+
+  return (
+    <ReceiptShell title="رسید پرداخت" subtitle={subtitle}>
+      {/* ── مشتری ── */}
+      <div className="mt-2.5">
+        <p className="text-[9.5px] font-extrabold text-[#5c5c58]">
+          {sub ? "نام مشترک" : "نام مشتری"}
+        </p>
+        <p className="font-display text-[19px] leading-7 text-[#111]">{cust?.name ?? "—"}</p>
+        {cust?.phone && (
+          <p className="num text-[10px] font-bold text-[#5c5c58]" dir="ltr">{cust.phone}</p>
+        )}
+      </div>
+
+      {/* ── جزئیات پرداخت ── */}
+      <div className="mt-2.5 space-y-0.5 border-t border-dashed border-[#8f8f8a] pt-1.5">
+        <Row k="نوع پرداخت" v={KIND_LABEL[payment.kind]} />
+        <Row k="تاریخ / ساعت" v={fmtDateTime(payment.createdAt)} />
+        <Row k="اپراتور" v={op?.name ?? "سامانه"} />
+        <Row k="حساب" v={acc ? `${acc.name} — ${accountKindLabel(acc.kind)}` : "—"} />
+        {payment.note && <Row k="توضیحات" v={payment.note} />}
+      </div>
+
+      {/* ── مبلغ ── */}
+      <div className="mt-2.5 flex items-center justify-between rounded-md bg-[#111] px-2.5 py-1.5">
+        <span className="text-[10.5px] font-extrabold text-white/75">مبلغ پرداخت</span>
+        <span className="num font-display text-[21px] leading-7 text-white">
+          {faNum(Math.abs(payment.amount))} <span className="text-[11px]">تومان</span>
+        </span>
       </div>
     </ReceiptShell>
   );
