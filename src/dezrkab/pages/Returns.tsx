@@ -560,6 +560,29 @@ export default function Returns() {
         )}
       </section>
 
+      {/* مودال فاکتور نهایی — پس از برگشت کامل یا از بخش تسویه */}
+      {(() => {
+        const inv = invoiceId ? db.rentals.find((r) => r.id === invoiceId) : null;
+        return (
+          <Modal
+            open={!!inv}
+            onClose={() => setInvoiceId(null)}
+            title={inv ? `فاکتور نهایی اجاره #${faNum(inv.number)}` : ""}
+          >
+            {inv && <ReturnReceipt rental={inv} />}
+            <div className="mt-4 flex gap-2">
+              <Btn className="flex-1" onClick={printThermalReceipt} autoFocus>
+                <IconPrint size={16} />
+                چاپ فاکتور
+              </Btn>
+              <Btn variant="dark" className="flex-1" onClick={() => setInvoiceId(null)}>
+                بستن
+              </Btn>
+            </div>
+          </Modal>
+        );
+      })()}
+
       {/* مودال لغو */}
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="لغو اجاره">
         <div className="flex items-start gap-2.5 rounded-xl bg-dangersoft p-3 text-xs font-bold leading-6 text-danger">
