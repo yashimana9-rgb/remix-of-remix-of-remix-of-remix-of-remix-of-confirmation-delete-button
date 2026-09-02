@@ -30,6 +30,7 @@ export default function Payments() {
   const [q, setQ] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [corrFor, setCorrFor] = useState<Payment | null>(null);
+  const [printPayment, setPrintPayment] = useState<Payment | null>(null);
 
   const now = Date.now();
   const activeLike = db.rentals.filter(
