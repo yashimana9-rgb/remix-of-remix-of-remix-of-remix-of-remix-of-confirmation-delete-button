@@ -3,10 +3,10 @@
  * رسیدهای حرارتی ۸۰ میلی‌متری — مشترک بین صفحه‌ها
  * فاکتور نهایی برگشت اجاره + فاکتور اشتراک، با همان چیدمان رسید اجاره حضوری.
  */
-import type { Rental, Subscription } from "../domain/models";
-import { paymentService } from "../services/paymentService";
+import type { Payment, Rental, Subscription } from "../domain/models";
+import { KIND_LABEL, paymentService } from "../services/paymentService";
 import { useDB } from "../storage/storage";
-import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtTime, money } from "../utils/format";
+import { accountKindLabel, faNum, faPhone, fmtDateFull, fmtDateTime, fmtTime, money } from "../utils/format";
 
 /**
  * چاپ روی رول حرارتی ۸ سانتی — بدون کاغذ اضافه.
